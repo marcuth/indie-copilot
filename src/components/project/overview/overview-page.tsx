@@ -80,7 +80,9 @@ export function OverviewPage() {
         setEditing(false)
     }
 
-    const currentCategoryId = editing ? categoryId : (activeProject.categoryId || categoryId)
+    const currentCategoryId = editing
+        ? categoryId
+        : activeProject.categoryId || categoryId
     const category =
         categories.find(
             (c: { id: string; slug: string }) =>
