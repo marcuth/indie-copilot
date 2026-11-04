@@ -130,14 +130,7 @@ export interface CompetitionData {
 
 export type Gender = "male" | "female" | "all"
 export type AgeRange =
-    | "14-17"
-    | "18-24"
-    | "25-34"
-    | "35-44"
-    | "45-54"
-    | "55-64"
-    | "65+"
-    | "all"
+    "14-17" | "18-24" | "25-34" | "35-44" | "45-54" | "55-64" | "65+" | "all"
 
 export interface TargetAudienceData {
     location: string
