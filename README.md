@@ -83,14 +83,14 @@ Veja o [`AGENTS.md`](./AGENTS.md) para as diretrizes completas.
 
 ## 🤖 Scripts
 
-| Comando               | Descrição                         |
-| --------------------- | --------------------------------- |
-| `npm run dev`         | Servidor de desenvolvimento Vite  |
-| `npm run tauri dev`   | App Tauri em modo desenvolvimento |
-| `npm run build`       | Compila TypeScript e gera o build |
-| `npm run lint`        | Verifica erros com ESLint         |
-| `npm run lint:fix`    | Corrige problemas de lint         |
-| `npm run format`      | Formata o código com Prettier     |
+| Comando             | Descrição                         |
+| ------------------- | --------------------------------- |
+| `npm run dev`       | Servidor de desenvolvimento Vite  |
+| `npm run tauri dev` | App Tauri em modo desenvolvimento |
+| `npm run build`     | Compila TypeScript e gera o build |
+| `npm run lint`      | Verifica erros com ESLint         |
+| `npm run lint:fix`  | Corrige problemas de lint         |
+| `npm run format`    | Formata o código com Prettier     |
 
 ## 🧪 Testes (Backend)
 
