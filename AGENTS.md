@@ -157,25 +157,25 @@ This project uses shadcn/ui for UI components. When adding new components:
 
 Para adicionar um novo componente, use: `npx shadcn@latest add <nome-do-componente>` (em lowercase kebab-case).
 
-|                    |                  |               |                 |
-| ------------------ | ---------------- | ------------- | --------------- |
-| Accordion          | Alert            | Alert Dialog  | Aspect Ratio    |
-| Attachment         | Avatar           | Badge         | Breadcrumb      |
-| Bubble             | Button           | Button Group  | Calendar        |
-| Card               | Carousel         | Chart         | Checkbox        |
-| Code Block         | Collapsible      | Combobox      | Command         |
-| Context Menu       | Data Table       | Date Picker   | Dialog          |
-| Direction          | Drawer           | Dropdown Menu | Empty           |
-| **Field** (Form)   | Hover Card       | Input         | Input Group     |
-| Input OTP          | Item             | Kbd           | Label           |
-| Marker             | Menubar          | Message       | Message Scroller|
-| Native Select      | Navigation Menu  | Pagination    | Popover         |
-| Progress           | Questionnaire    | Radio Group   | Resizable       |
-| Scroll Area        | Select           | Separator     | Sheet           |
-| Sidebar            | Skeleton         | Slider        | **Sonner** (Toast)|
-| Spinner            | Switch           | Table         | Tabs            |
-| Textarea           | Toggle           | Toggle Group  | Tooltip         |
-| Trace              |                  |               |                 |
+|                  |                 |               |                    |
+| ---------------- | --------------- | ------------- | ------------------ |
+| Accordion        | Alert           | Alert Dialog  | Aspect Ratio       |
+| Attachment       | Avatar          | Badge         | Breadcrumb         |
+| Bubble           | Button          | Button Group  | Calendar           |
+| Card             | Carousel        | Chart         | Checkbox           |
+| Code Block       | Collapsible     | Combobox      | Command            |
+| Context Menu     | Data Table      | Date Picker   | Dialog             |
+| Direction        | Drawer          | Dropdown Menu | Empty              |
+| **Field** (Form) | Hover Card      | Input         | Input Group        |
+| Input OTP        | Item            | Kbd           | Label              |
+| Marker           | Menubar         | Message       | Message Scroller   |
+| Native Select    | Navigation Menu | Pagination    | Popover            |
+| Progress         | Questionnaire   | Radio Group   | Resizable          |
+| Scroll Area      | Select          | Separator     | Sheet              |
+| Sidebar          | Skeleton        | Slider        | **Sonner** (Toast) |
+| Spinner          | Switch          | Table         | Tabs               |
+| Textarea         | Toggle          | Toggle Group  | Tooltip            |
+| Trace            |                 |               |                    |
 
 ## Icons
 
