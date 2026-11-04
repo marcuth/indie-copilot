@@ -1,82 +1,108 @@
-# 🚀 Tauri + React Simple App Template
+# 🚀 Indie Copilot
 
-Template moderno e **opinado** para criação de aplicações desktop leves com Tauri, React e Vite. Focado em alta performance, produtividade e padronização.
+Copiloto de IA para **indie hackers**, em formato desktop. Planeje, valide e lance seu produto — **localmente, com privacidade e com o LLM que você quiser**.
+
+## ✨ Funcionalidades
+
+- **Local-first:** seus dados ficam no seu computador (SQLite), sem servidores de terceiros.
+- **Multi-LLM:** qualquer provedor compatível com a API da OpenAI (OpenAI, DeepSeek, Groq, OpenRouter) ou modelos locais (Ollama, LM Studio), inclusive offline.
+- **Chat com o Copilot:** converse com a IA tendo o contexto do seu projeto.
+- **Planejamento estruturado**, em seções:
+    - Visão geral e identidade
+    - Problema e solução
+    - Concorrência
+    - Público-alvo e persona
+    - Aquisição de usuários
+    - Modelo de negócio
+    - Marketing e lançamento
+    - Roadmap e equipe
+    - Infraestrutura
+    - Finanças, riscos e SWOT
+    - Notas
+- **Temas** claro/escuro e configuração de provedores de IA nas configurações.
+
+Mais detalhes de arquitetura em [`INDIE_COPILOT_SPEC.md`](./INDIE_COPILOT_SPEC.md).
 
 ## 🛠 Tech Stack
 
-- **Framework Desktop:** [Tauri v2](https://tauri.app/)
-- **Frontend:** [React 19](https://react.dev/)
-- **Build Tool:** [Vite 7](https://vite.dev/)
-- **Linguagem:** [TypeScript](https://www.typescriptlang.org/) & [Rust](https://www.rust-lang.org/)
-- **Estilização:** [Tailwind CSS 4](https://tailwindcss.com/)
-- **Validação:** [Zod](https://zod.dev/)
-- **Formulários:** [React Hook Form](https://react-hook-form.com/)
+- **Desktop:** [Tauri v2](https://tauri.app/) (Rust)
+- **Frontend:** [React 19](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/)
+- **Build:** [Vite 7](https://vite.dev/)
+- **Estilo:** [Tailwind CSS 4](https://tailwindcss.com/) + [shadcn/ui](https://ui.shadcn.com/)
+- **Validação:** [Zod 4](https://zod.dev/) e [React Hook Form](https://react-hook-form.com/)
+- **IA:** SDK [`openai`](https://github.com/openai/openai-node) com `baseURL` configurável
+- **Ícones:** `react-icons` (Lucide)
+
+## 📋 Pré-requisitos
+
+- [Node.js](https://nodejs.org/) 20+
+- [Rust](https://www.rust-lang.org/tools/install)
+- [Dependências do Tauri](https://tauri.app/start/prerequisites/) para o seu sistema operacional
 
 ## 🏎 Começando
 
-1.  **Instalar dependências:**
+```bash
+# Instalar dependências
+npm install
 
-    ```bash
-    npm install
-    ```
+# Ambiente de desenvolvimento (app desktop)
+npm run tauri dev
 
-2.  **Iniciar ambiente de desenvolvimento:**
+# Build de produção
+npm run tauri build
+```
 
-    ```bash
-    npm run tauri dev
-    ```
+Ao abrir o app, configure seu provedor de IA em **Configurações** (URL base, chave de API e modelo).
 
-3.  **Gerar build de produção:**
-    ```bash
-    npm run tauri build
-    ```
+## 📁 Estrutura
 
-## 🎨 Interface e Shadcn/UI
+```
+src/
+├── components/
+│   ├── copilot/    # Chat com a IA
+│   ├── layout/     # Sidebar e páginas de boas-vindas
+│   ├── project/    # Seções de planejamento
+│   ├── settings/   # Configurações e provedores de IA
+│   └── ui/         # Componentes base (shadcn/ui)
+├── contexts/       # Projeto ativo, tema e configurações de IA
+├── hooks/          # Hooks customizados
+├── lib/            # Cliente de IA, prompts e banco de dados
+├── schemas/        # Schemas Zod
+└── types/          # Tipos globais
+src-tauri/          # Backend Rust (Tauri)
+```
 
-Para manter a aplicação leve e única em termos de design, este projeto foi projetado para utilizar o **shadcn/ui via CLI**.
+## 📜 Convenções
 
-> [!IMPORTANT]
-> **NÃO** reutilize componentes e estilos de projetos anteriores manualmente. Para cada novo projeto, utilize o **shadcn/ui create** para fazer o setup inicial dos componentes base.
->
-> 🔗 **[https://ui.shadcn.com/create](https://ui.shadcn.com/create)**
+- Indentação de 4 espaços, sem ponto e vírgula, aspas duplas.
+- Imports ordenados por tamanho de linha (descendente).
+- Arquivos em `kebab-case`.
+- Componentes de UI adicionados apenas via `npx shadcn@latest add <componente>`.
 
-### 🎨 Ícones
+Veja o [`AGENTS.md`](./AGENTS.md) para as diretrizes completas.
 
-Utilizamos o **`react-icons`**, priorizando a biblioteca **Lucide** (`react-icons/lu`).
+## 🤖 Scripts
 
-## 📜 Convenções e Arquitetura
+| Comando               | Descrição                         |
+| --------------------- | --------------------------------- |
+| `npm run dev`         | Servidor de desenvolvimento Vite  |
+| `npm run tauri dev`   | App Tauri em modo desenvolvimento |
+| `npm run build`       | Compila TypeScript e gera o build |
+| `npm run lint`        | Verifica erros com ESLint         |
+| `npm run lint:fix`    | Corrige problemas de lint         |
+| `npm run format`      | Formata o código com Prettier     |
 
-Este projeto segue regras estritas de arquitetura e estilização.
+## 🧪 Testes (Backend)
 
-- **Identação:** 4 espaços.
-- **Ponto e vírgula:** Desativado (`semi: false`).
-- **Aspas:** Duplas (`"`) por padrão.
-- **Ordenação de Imports:** Automática por tamanho de linha (descendente).
+```bash
+cd src-tauri
+cargo test
+cargo tarpaulin   # cobertura (requer cargo-tarpaulin)
+```
 
-### Estrutura de Pastas
+## 📄 Licença
 
-- **`src/services`**: Camada de lógica e comunicação.
-- **`src/schemas`**: Validações Zod para formulários e dados.
-- **`src/hooks`**: Hooks customizados e reutilizáveis.
-    - **`src/hooks/forms`**: Hooks específicos para gerenciamento de estados de formulários.
-- **`src/types`**: Definições de tipos TypeScript globais.
-- **`src/components/providers`**: Centralização de contextos.
-- **`src/components/ui`**: Componentes base (Shadcn/UI).
-
-## 🧪 Testes e Cobertura (Backend)
-
-O backend (Rust) deve manter **100% de cobertura de testes**.
-
-- **Rodar testes:** `cargo test` (dentro da pasta `src-tauri`).
-- **Cobertura:** Utilizamos o `cargo-tarpaulin` para medição.
-    - Instalação: `cargo install cargo-tarpaulin`.
-    - Comando: `cargo tarpaulin --ignore-config-files --stdout`.
-
-## 🤖 Scripts Úteis
-
-- `npm run format`: Formata o código com Prettier.
-- `npm run lint`: Verifica erros com ESLint.
-- `npm run lint:fix`: Corrige automaticamente problemas de linting.
+[MIT](./LICENSE) © [Marcuth](https://marcuth.dev)
 
 ---
 
