@@ -123,7 +123,10 @@ export function NewProjectDialog({
                                 value={categoryId}
                                 onValueChange={setCategoryId}
                             >
-                                <SelectTrigger id="project-category" className="w-full">
+                                <SelectTrigger
+                                    id="project-category"
+                                    className="w-full"
+                                >
                                     <SelectValue placeholder="Selecionar..." />
                                 </SelectTrigger>
                                 <SelectContent>
