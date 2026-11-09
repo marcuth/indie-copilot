@@ -128,4 +128,15 @@
     html {
         @apply font-sans;
     }
+
+    /* Barras de rolagem discretas (verticais e horizontais) */
+    * {
+        scrollbar-width: thin;
+        scrollbar-color: color-mix(in oklab, var(--foreground) 15%, transparent)
+            transparent;
+    }
+    *:hover {
+        scrollbar-color: color-mix(in oklab, var(--foreground) 30%, transparent)
+            transparent;
+    }
 }
