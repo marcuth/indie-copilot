@@ -110,7 +110,7 @@ export function CopilotChat({ project, open, onOpenChange }: CopilotChatProps) {
                 className="flex h-full max-h-screen w-[420px] flex-col gap-0 overflow-hidden p-0 sm:max-w-[480px]"
             >
                 {/* Header */}
-                <SheetHeader className="shrink-0 border-b border-border/50 p-4">
+                <SheetHeader className="shrink-0 border-b border-border/50 p-4 pr-12">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary">

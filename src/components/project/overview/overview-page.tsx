@@ -10,6 +10,7 @@ import { useActiveProject } from "@/contexts/active-project-context"
 import { CopilotChat } from "@/components/copilot/copilot-chat"
 import { getCategories } from "@/lib/db/database-client"
 import { Separator } from "@/components/ui/separator"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -298,18 +299,14 @@ export function OverviewPage() {
                                     </label>
                                     {editing ? (
                                         <div className="flex items-center gap-2">
-                                            <input
-                                                type="checkbox"
+                                            <Checkbox
                                                 id="already-exists"
                                                 checked={alreadyExists}
-                                                onChange={(
-                                                    e: React.ChangeEvent<HTMLInputElement>,
-                                                ) =>
+                                                onCheckedChange={(checked) =>
                                                     setAlreadyExists(
-                                                        e.target.checked,
+                                                        checked === true,
                                                     )
                                                 }
-                                                className="h-4 w-4 rounded"
                                             />
                                             <label
                                                 htmlFor="already-exists"

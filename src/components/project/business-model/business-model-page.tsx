@@ -9,6 +9,7 @@ import { LuCircleDollarSign, LuPlus, LuTrash2, LuCheck } from "react-icons/lu"
 import type { BusinessModelFormValues } from "@/schemas/planning"
 import { SectionPage } from "@/components/project/section-page"
 import { TagInput } from "@/components/ui/tag-input"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -259,16 +260,14 @@ function BusinessModelContent({
 
                                 <div className="flex items-center gap-3 pt-2 border-t border-border/40">
                                     <label className="flex items-center gap-2 text-xs font-medium cursor-pointer">
-                                        <input
-                                            type="checkbox"
+                                        <Checkbox
                                             checked={prod.includedInMvp}
-                                            onChange={(e) =>
+                                            onCheckedChange={(checked) =>
                                                 updateProduct(idx, {
                                                     includedInMvp:
-                                                        e.target.checked,
+                                                        checked === true,
                                                 })
                                             }
-                                            className="rounded border-border text-primary focus:ring-primary h-4 w-4"
                                         />
                                         <span>Incluído no MVP inicial</span>
                                     </label>

@@ -16,6 +16,7 @@ import { useAiSettings } from "@/contexts/ai-settings-context"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { createAiClient } from "@/lib/ai/client-factory"
 import { Separator } from "@/components/ui/separator"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -322,19 +323,15 @@ export function AiProvidersSettings() {
                         />
                     </div>
                     <div className="flex items-center gap-2">
-                        <input
-                            type="checkbox"
+                        <Checkbox
                             id="is-default"
                             checked={form.isDefault}
-                            onChange={(
-                                e: React.ChangeEvent<HTMLInputElement>,
-                            ) =>
+                            onCheckedChange={(checked) =>
                                 setForm((f) => ({
                                     ...f,
-                                    isDefault: e.target.checked,
+                                    isDefault: checked === true,
                                 }))
                             }
-                            className="h-4 w-4"
                         />
                         <label
                             htmlFor="is-default"
