@@ -1,3 +1,12 @@
+import {
+    BACKUP_FORMAT,
+    BACKUP_VERSION,
+    countBackup,
+    normalizeBackupData,
+    type BackupCounts,
+    type BackupData,
+    type BackupFile,
+} from "../../schemas/backup"
 import type {
     AiProvider,
     AppSettings,
@@ -257,12 +266,7 @@ const LEGACY_KEYS = {
 const MIGRATION_FLAG = "indie-copilot:sqlite-migrated-at"
 const SETTINGS_KEY = "app"
 
-export interface MigrationReport {
-    projects: number
-    providers: number
-    sessions: number
-    messages: number
-    notes: number
+export interface MigrationReport extends BackupCounts {
     skipped: number
 }
 
@@ -279,6 +283,38 @@ function asArray<T>(value: T[] | null): T[] {
     return Array.isArray(value) ? value : []
 }
 
+/** Instruções INSERT OR IGNORE para todos os dados (a ordem respeita as chaves estrangeiras). */
+function buildInsertStatements(data: BackupData): SqlStatement[] {
+    const statements: SqlStatement[] = [
+        ...data.projects.map((p) =>
+            insertIgnoreStatement("projects", projectToRow(p)),
+        ),
+        ...data.providers.map((p) =>
+            insertIgnoreStatement("ai_providers", providerToRow(p)),
+        ),
+        ...data.sessions.map((s) =>
+            insertIgnoreStatement("chat_sessions", sessionToRow(s)),
+        ),
+        ...data.messages.map((m) =>
+            insertIgnoreStatement("chat_messages", messageToRow(m)),
+        ),
+        ...data.notes.map((n) =>
+            insertIgnoreStatement("project_notes", noteToRow(n)),
+        ),
+    ]
+
+    if (data.settings) {
+        statements.push(
+            insertIgnoreStatement("settings", {
+                key: SETTINGS_KEY,
+                value: JSON.stringify(data.settings),
+            }),
+        )
+    }
+
+    return statements
+}
+
 /**
  * Copia os dados que estavam no localStorage para o SQLite.
  *
@@ -289,86 +325,23 @@ function asArray<T>(value: T[] | null): T[] {
 async function migrateFromLocalStorage(): Promise<MigrationReport | null> {
     if (localStorage.getItem(MIGRATION_FLAG)) return null
 
-    const projects = asArray(readLegacy<Project[]>(LEGACY_KEYS.PROJECTS))
-    const providers = asArray(readLegacy<AiProvider[]>(LEGACY_KEYS.PROVIDERS))
-    const sessions = asArray(readLegacy<ChatSession[]>(LEGACY_KEYS.SESSIONS))
-    const notes = asArray(readLegacy<ProjectNote[]>(LEGACY_KEYS.NOTES))
-    const settings = readLegacy<AppSettings>(LEGACY_KEYS.SETTINGS)
+    const { data, skipped } = normalizeBackupData({
+        projects: asArray(readLegacy<Project[]>(LEGACY_KEYS.PROJECTS)),
+        providers: asArray(readLegacy<AiProvider[]>(LEGACY_KEYS.PROVIDERS)),
+        sessions: asArray(readLegacy<ChatSession[]>(LEGACY_KEYS.SESSIONS)),
+        messages: asArray(readLegacy<ChatMessage[]>(LEGACY_KEYS.MESSAGES)),
+        notes: asArray(readLegacy<ProjectNote[]>(LEGACY_KEYS.NOTES)),
+        settings: readLegacy<AppSettings>(LEGACY_KEYS.SETTINGS),
+    })
 
-    // As mensagens ficavam em duas listas (a global e uma cópia dentro de cada
-    // sessão). A união pelo id garante que nenhuma se perca.
-    const messagesById = new Map<string, ChatMessage>()
-    for (const message of asArray(
-        readLegacy<ChatMessage[]>(LEGACY_KEYS.MESSAGES),
-    )) {
-        messagesById.set(message.id, message)
-    }
-    for (const session of sessions) {
-        for (const message of asArray(session.messages)) {
-            if (!messagesById.has(message.id)) {
-                messagesById.set(message.id, {
-                    ...message,
-                    sessionId: message.sessionId ?? session.id,
-                })
-            }
-        }
-    }
-
-    const projectIds = new Set(projects.map((project) => project.id))
-    const validSessions = sessions.filter((s) => projectIds.has(s.projectId))
-    const sessionIds = new Set(validSessions.map((session) => session.id))
-    const validMessages = [...messagesById.values()].filter((m) =>
-        sessionIds.has(m.sessionId),
-    )
-    const validNotes = notes.filter((note) => projectIds.has(note.projectId))
-
-    const skipped =
-        sessions.length -
-        validSessions.length +
-        (messagesById.size - validMessages.length) +
-        (notes.length - validNotes.length)
-
-    const statements: SqlStatement[] = [
-        ...projects.map((p) =>
-            insertIgnoreStatement("projects", projectToRow(p)),
-        ),
-        ...providers.map((p) =>
-            insertIgnoreStatement("ai_providers", providerToRow(p)),
-        ),
-        ...validSessions.map((s) =>
-            insertIgnoreStatement("chat_sessions", sessionToRow(s)),
-        ),
-        ...validMessages.map((m) =>
-            insertIgnoreStatement("chat_messages", messageToRow(m)),
-        ),
-        ...validNotes.map((n) =>
-            insertIgnoreStatement("project_notes", noteToRow(n)),
-        ),
-    ]
-
-    if (settings) {
-        statements.push(
-            insertIgnoreStatement("settings", {
-                key: SETTINGS_KEY,
-                value: JSON.stringify(settings),
-            }),
-        )
-    }
-
+    const statements = buildInsertStatements(data)
     if (statements.length > 0) {
         await dbBatch(statements)
     }
 
     localStorage.setItem(MIGRATION_FLAG, now())
 
-    return {
-        projects: projects.length,
-        providers: providers.length,
-        sessions: validSessions.length,
-        messages: validMessages.length,
-        notes: validNotes.length,
-        skipped,
-    }
+    return { ...countBackup(data), skipped }
 }
 
 async function loadCache(): Promise<void> {
@@ -415,19 +388,51 @@ export function initDatabase(): Promise<MigrationReport | null> {
     return initialization
 }
 
-/** Dados completos, no mesmo formato dos backups antigos (chaves "indie-copilot:*"). */
-export function exportAllData(): Record<string, unknown> {
+// ─── Backup e restauração ────────────────────────────────────────────────────
+
+function withoutCategory<T extends { category?: unknown }>(item: T): T {
+    const copy = { ...item }
+    delete copy.category
+    return copy
+}
+
+/** Backup completo, espelhando as tabelas do banco. */
+export function exportBackup(): BackupFile {
     return {
-        [LEGACY_KEYS.SETTINGS]: getSettings(),
-        [LEGACY_KEYS.PROVIDERS]: getProviders(),
-        [LEGACY_KEYS.PROJECTS]: getProjects(),
-        [LEGACY_KEYS.SESSIONS]: getChatSessions().map((session) => ({
-            ...session,
-            messages: getMessages(session.id),
-        })),
-        [LEGACY_KEYS.MESSAGES]: getMessages(),
-        [LEGACY_KEYS.NOTES]: getNotes(),
+        format: BACKUP_FORMAT,
+        version: BACKUP_VERSION,
+        exportedAt: now(),
+        data: {
+            settings: cache.settings ? clone(cache.settings) : null,
+            providers: getProviders(),
+            // a categoria é derivada de categoryId, então não vai no arquivo
+            projects: getProjects().map(withoutCategory),
+            sessions: cache.sessions.map((session) => ({
+                ...clone(session),
+                messages: [],
+            })),
+            messages: getMessages(),
+            notes: getNotes().map(withoutCategory),
+        },
     }
+}
+
+/**
+ * Substitui TODOS os dados do banco pelos do backup, em uma única transação:
+ * se algo falhar, os dados atuais permanecem intactos.
+ */
+export async function restoreBackup(data: BackupData): Promise<void> {
+    await flushDatabase()
+
+    await dbBatch([
+        // sessões, mensagens e notas saem em cascata junto com os projetos
+        { sql: "DELETE FROM projects" },
+        { sql: "DELETE FROM ai_providers" },
+        { sql: "DELETE FROM settings" },
+        ...buildInsertStatements(data),
+    ])
+
+    await loadCache()
 }
 
 // ─── AppSettings ──────────────────────────────────────────────────────────────
