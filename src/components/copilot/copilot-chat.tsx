@@ -28,8 +28,8 @@ import {
     InputGroupButton,
     InputGroupTextarea,
 } from "@/components/ui/input-group"
-import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
 import { useCopilotChat } from "@/hooks/use-copilot-chat"
 import { Button } from "@/components/ui/button"
 import type { Project } from "@/types"
