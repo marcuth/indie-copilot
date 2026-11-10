@@ -61,6 +61,11 @@ export const PAGE_REFERENCES: Partial<Record<ReferencePageKey, Reference[]>> = {
             url: "https://www.youtube.com/watch?v=SiLhRf8MtRY",
             description: "Canal do Consultor",
         },
+        {
+            title: "NÃO CRIE UM MICRO SAAS ANTES DE VER ESSE VÍDEO 👍🏻",
+            url: "https://www.youtube.com/watch?v=UBntebTUGa0",
+            description: "André Elias | Dev",
+        },
     ],
     problemSolution: [
         {
