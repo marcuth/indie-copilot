@@ -17,6 +17,8 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { useState, useEffect } from "react"
 
+import { PlanningProgressCard } from "./planning-progress-card"
+
 export function OverviewPage() {
     const { activeProject, updateActiveProject } = useActiveProject()
     const categories = getCategories()
@@ -144,6 +146,8 @@ export function OverviewPage() {
                 {/* Content */}
                 <div className="flex-1 overflow-y-auto px-8 py-6">
                     <div className="mx-auto max-w-2xl space-y-6">
+                        <PlanningProgressCard project={activeProject} />
+
                         {/* Project identity */}
                         <div className="rounded-xl border border-border/50 bg-card p-6">
                             <h2 className="font-heading text-base font-semibold mb-4">

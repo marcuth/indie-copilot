@@ -1,15 +1,5 @@
 import {
     LuLayoutDashboard,
-    LuLightbulb,
-    LuUsers,
-    LuTrendingUp,
-    LuDollarSign,
-    LuMegaphone,
-    LuMap,
-    LuUsersRound,
-    LuServer,
-    LuShieldAlert,
-    LuChartBar,
     LuStickyNote,
     LuSettings,
     LuPlus,
@@ -17,12 +7,14 @@ import {
     LuFolderOpen,
     LuChevronDown,
     LuTrash2,
+    LuCircleCheck,
 } from "react-icons/lu"
 import { useNavigate, useLocation } from "react-router-dom"
 import { useState } from "react"
 
 import {
     Sidebar,
+    SidebarContent,
     SidebarFooter,
     SidebarGroup,
     SidebarGroupContent,
@@ -40,41 +32,17 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "../ui/dropdown-menu"
+import {
+    getPlanningProgress,
+    isPlanningSectionFilled,
+} from "../../lib/planning"
 import { useActiveProject } from "../../contexts/active-project-context"
 import { NewProjectDialog } from "../project/new-project-dialog"
 import { Avatar, AvatarFallback } from "../ui/avatar"
 import { ScrollArea } from "../ui/scroll-area"
+import { Progress } from "../ui/progress"
 import { Button } from "../ui/button"
 import { Badge } from "../ui/badge"
-
-const PROJECT_NAV_ITEMS = [
-    { label: "Visão Geral", path: "overview", icon: LuLayoutDashboard },
-    {
-        label: "Problema & Solução",
-        path: "problem-solution",
-        icon: LuLightbulb,
-    },
-    { label: "Público-Alvo", path: "target-audience", icon: LuUsers },
-    {
-        label: "Mercado & Concorrência",
-        path: "competition",
-        icon: LuTrendingUp,
-    },
-    { label: "Modelo de Negócio", path: "business-model", icon: LuDollarSign },
-    {
-        label: "Aquisição de Usuários",
-        path: "user-acquisition",
-        icon: LuMegaphone,
-    },
-    { label: "Marketing", path: "marketing", icon: LuMegaphone },
-    { label: "Roadmap", path: "roadmap", icon: LuMap },
-    { label: "Equipe", path: "team", icon: LuUsersRound },
-    { label: "Infraestrutura", path: "infrastructure", icon: LuServer },
-    { label: "Finanças", path: "financials", icon: LuChartBar },
-    { label: "Riscos", path: "risks", icon: LuShieldAlert },
-    { label: "Análise SWOT", path: "swot-analysis", icon: LuChartBar },
-    { label: "Notas", path: "notes", icon: LuStickyNote },
-]
 
 export function AppSidebar() {
     const { projects, activeProject, setActiveProjectId, removeProject } =
@@ -87,6 +55,8 @@ export function AppSidebar() {
         if (!activeProject) return
         navigate(`/project/${activeProject.id}/${path}`)
     }
+
+    const progress = activeProject ? getPlanningProgress(activeProject) : null
 
     const isActive = (path: string) => location.pathname.includes(`/${path}`)
 
@@ -220,42 +190,130 @@ export function AppSidebar() {
                 <SidebarSeparator />
 
                 {/* Project Navigation */}
-                {activeProject && (
-                    <SidebarGroup className="flex-1">
-                        <SidebarGroupLabel>
-                            <span className="truncate">
-                                {activeProject.name}
-                            </span>
-                            {activeProject.category && (
-                                <Badge
-                                    variant="secondary"
-                                    className="ml-1 text-[10px]"
-                                >
-                                    {activeProject.category.name}
-                                </Badge>
-                            )}
-                        </SidebarGroupLabel>
-                        <SidebarGroupContent>
-                            <ScrollArea className="h-full">
+                {activeProject && progress && (
+                    <SidebarContent>
+                        <SidebarGroup>
+                            <SidebarGroupLabel>
+                                <span className="truncate">
+                                    {activeProject.name}
+                                </span>
+                                {activeProject.category && (
+                                    <Badge
+                                        variant="secondary"
+                                        className="ml-1 text-[10px]"
+                                    >
+                                        {activeProject.category.name}
+                                    </Badge>
+                                )}
+                            </SidebarGroupLabel>
+                            <SidebarGroupContent>
+                                <div className="px-2 pb-2 group-data-[collapsible=icon]:hidden">
+                                    <div className="mb-1.5 flex items-center justify-between text-xs">
+                                        <span className="text-muted-foreground">
+                                            Progresso do planejamento
+                                        </span>
+                                        <span className="font-semibold">
+                                            {progress.percentage}%
+                                        </span>
+                                    </div>
+                                    <Progress
+                                        value={progress.percentage}
+                                        className="h-1.5"
+                                    />
+                                    <p className="mt-1 text-[11px] text-muted-foreground">
+                                        {progress.completed} de {progress.total}{" "}
+                                        etapas preenchidas
+                                    </p>
+                                </div>
                                 <SidebarMenu>
-                                    {PROJECT_NAV_ITEMS.map((item) => (
-                                        <SidebarMenuItem key={item.path}>
-                                            <SidebarMenuButton
-                                                isActive={isActive(item.path)}
-                                                onClick={() =>
-                                                    navigateTo(item.path)
-                                                }
-                                                className="text-sm"
-                                            >
-                                                <item.icon className="h-4 w-4" />
-                                                <span>{item.label}</span>
-                                            </SidebarMenuButton>
-                                        </SidebarMenuItem>
-                                    ))}
+                                    <SidebarMenuItem>
+                                        <SidebarMenuButton
+                                            isActive={isActive("overview")}
+                                            onClick={() =>
+                                                navigateTo("overview")
+                                            }
+                                            tooltip="Visão Geral"
+                                            className="text-sm"
+                                        >
+                                            <LuLayoutDashboard className="h-4 w-4" />
+                                            <span>Visão Geral</span>
+                                        </SidebarMenuButton>
+                                    </SidebarMenuItem>
                                 </SidebarMenu>
-                            </ScrollArea>
-                        </SidebarGroupContent>
-                    </SidebarGroup>
+                            </SidebarGroupContent>
+                        </SidebarGroup>
+
+                        {progress.categories.map(
+                            ({ category, completed, total }) => (
+                                <SidebarGroup key={category.id}>
+                                    <SidebarGroupLabel className="flex items-center justify-between">
+                                        <span className="truncate">
+                                            {category.label}
+                                        </span>
+                                        <span className="text-[10px] font-normal tabular-nums">
+                                            {completed}/{total}
+                                        </span>
+                                    </SidebarGroupLabel>
+                                    <SidebarGroupContent>
+                                        <SidebarMenu>
+                                            {category.sections.map(
+                                                (section) => (
+                                                    <SidebarMenuItem
+                                                        key={section.path}
+                                                    >
+                                                        <SidebarMenuButton
+                                                            isActive={isActive(
+                                                                section.path,
+                                                            )}
+                                                            onClick={() =>
+                                                                navigateTo(
+                                                                    section.path,
+                                                                )
+                                                            }
+                                                            tooltip={
+                                                                section.label
+                                                            }
+                                                            className="text-sm"
+                                                        >
+                                                            <section.icon className="h-4 w-4" />
+                                                            <span>
+                                                                {section.label}
+                                                            </span>
+                                                            {isPlanningSectionFilled(
+                                                                activeProject[
+                                                                    section.key
+                                                                ],
+                                                            ) && (
+                                                                <LuCircleCheck className="ml-auto h-3.5 w-3.5 text-confirm" />
+                                                            )}
+                                                        </SidebarMenuButton>
+                                                    </SidebarMenuItem>
+                                                ),
+                                            )}
+                                        </SidebarMenu>
+                                    </SidebarGroupContent>
+                                </SidebarGroup>
+                            ),
+                        )}
+
+                        <SidebarGroup>
+                            <SidebarGroupContent>
+                                <SidebarMenu>
+                                    <SidebarMenuItem>
+                                        <SidebarMenuButton
+                                            isActive={isActive("notes")}
+                                            onClick={() => navigateTo("notes")}
+                                            tooltip="Notas"
+                                            className="text-sm"
+                                        >
+                                            <LuStickyNote className="h-4 w-4" />
+                                            <span>Notas</span>
+                                        </SidebarMenuButton>
+                                    </SidebarMenuItem>
+                                </SidebarMenu>
+                            </SidebarGroupContent>
+                        </SidebarGroup>
+                    </SidebarContent>
                 )}
 
                 <SidebarFooter className="p-2">
