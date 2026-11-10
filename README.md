@@ -35,12 +35,12 @@ Crie um projeto para cada ideia, com nome, descrição e logo. Acompanhe quanto 
 
 Em vez de uma página em branco, você preenche seções pensadas para indie hackers, agrupadas por etapa:
 
-| Etapa                      | Seções                                           |
-| -------------------------- | ------------------------------------------------ |
+| Etapa                      | Seções                                                                 |
+| -------------------------- | ---------------------------------------------------------------------- |
 | **Descoberta & Validação** | Problema & Solução, Público-Alvo, Mercado & Concorrência, Análise SWOT |
-| **Negócio & Finanças**     | Modelo de Negócio, Finanças, Riscos              |
-| **Crescimento**            | Aquisição de Usuários, Marketing                 |
-| **Execução**               | Roadmap, Equipe, Infraestrutura                  |
+| **Negócio & Finanças**     | Modelo de Negócio, Finanças, Riscos                                    |
+| **Crescimento**            | Aquisição de Usuários, Marketing                                       |
+| **Execução**               | Roadmap, Equipe, Infraestrutura                                        |
 
 Além delas, há a **Visão geral** do projeto e as **Notas**, para ideias soltas e anotações.
 
@@ -108,11 +108,11 @@ Baixe o instalador mais recente na página de [**Releases**](https://github.com/
 
 Abra **Configurações** e cadastre um provedor de IA:
 
-| Campo         | O que colocar                                                                    |
-| ------------- | -------------------------------------------------------------------------------- |
-| **URL base**  | O endereço da API do provedor (ex.: `https://api.openai.com/v1` ou `http://localhost:11434/v1` para o Ollama) |
-| **Chave de API** | A chave gerada no site do provedor (modelos locais normalmente não exigem)    |
-| **Modelo**    | O nome do modelo que você quer usar (ex.: `gpt-4o-mini`, `llama3`)               |
+| Campo            | O que colocar                                                                                                 |
+| ---------------- | ------------------------------------------------------------------------------------------------------------- |
+| **URL base**     | O endereço da API do provedor (ex.: `https://api.openai.com/v1` ou `http://localhost:11434/v1` para o Ollama) |
+| **Chave de API** | A chave gerada no site do provedor (modelos locais normalmente não exigem)                                    |
+| **Modelo**       | O nome do modelo que você quer usar (ex.: `gpt-4o-mini`, `llama3`)                                            |
 
 ### 3. Criar seu primeiro projeto
 
