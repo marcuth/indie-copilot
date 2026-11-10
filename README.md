@@ -165,7 +165,7 @@ npm run tauri build   # gera o instalador
 
 > Use sempre `npm run tauri dev`: rodar só o Vite no navegador não funciona, pois o app precisa do Tauri para abrir o banco de dados.
 
-Mais detalhes em [`CLAUDE.md`](./CLAUDE.md) (arquitetura e convenções) e [`INDIE_COPILOT_SPEC.md`](./INDIE_COPILOT_SPEC.md) (documento de design original).
+Mais detalhes de arquitetura e convenções em [`CLAUDE.md`](./CLAUDE.md).
 
 ```bash
 npm run ci                    # lint + checagem de formatação

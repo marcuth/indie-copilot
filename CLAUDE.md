@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-Indie Copilot is a local-first desktop app (Tauri v2 + React 19 + TypeScript + Vite 7 + Tailwind 4) that helps indie hackers plan a product and chat with an LLM that knows the project. The UI is in Brazilian Portuguese; keep new user-facing strings in pt-BR. `INDIE_COPILOT_SPEC.md` is the original design document; where it disagrees with the code (notably the database schema), the code wins.
+Indie Copilot is a local-first desktop app (Tauri v2 + React 19 + TypeScript + Vite 7 + Tailwind 4) that helps indie hackers plan a product and chat with an LLM that knows the project. The UI is in Brazilian Portuguese; keep new user-facing strings in pt-BR.
 
 ## Commands
 
