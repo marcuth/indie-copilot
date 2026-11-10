@@ -9,26 +9,12 @@ import {
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs"
 import { AiProvidersSettings } from "./ai-providers-settings"
-import { exportAllData } from "../../lib/db/database-client"
 import { useTheme } from "../../contexts/theme-context"
+import { BackupSettings } from "./backup-settings"
 import { Separator } from "../ui/separator"
-import { Button } from "../ui/button"
 
 export function SettingsPage() {
     const { theme, setTheme } = useTheme()
-
-    const handleExport = () => {
-        const data = exportAllData()
-        const blob = new Blob([JSON.stringify(data, null, 2)], {
-            type: "application/json",
-        })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement("a")
-        a.href = url
-        a.download = `indie-copilot-backup-${new Date().toISOString().slice(0, 10)}.json`
-        a.click()
-        URL.revokeObjectURL(url)
-    }
 
     return (
         <div className="flex h-full flex-col">
@@ -132,29 +118,15 @@ export function SettingsPage() {
                         <TabsContent value="backup" className="space-y-6">
                             <div>
                                 <h2 className="font-heading text-lg font-bold">
-                                    Backup & Exportação
+                                    Backup & Restauração
                                 </h2>
                                 <p className="text-sm text-muted-foreground">
-                                    Exporte todos os seus dados como JSON
+                                    Exporte seus dados ou restaure a partir de
+                                    um arquivo de backup
                                 </p>
                             </div>
 
-                            <div className="rounded-xl border border-border/50 bg-card p-6 space-y-4">
-                                <div>
-                                    <h3 className="font-semibold text-sm">
-                                        Exportar dados
-                                    </h3>
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                        Gera um arquivo JSON com todos os
-                                        projetos, notas, conversas e
-                                        configurações.
-                                    </p>
-                                </div>
-                                <Button onClick={handleExport}>
-                                    <LuDownload className="mr-2 h-4 w-4" />
-                                    Baixar backup (.json)
-                                </Button>
-                            </div>
+                            <BackupSettings />
                         </TabsContent>
                     </Tabs>
                 </div>
