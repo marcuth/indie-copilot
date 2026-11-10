@@ -1,5 +1,4 @@
 import {
-    LuBot,
     LuRocket,
     LuSparkles,
     LuShield,
@@ -43,9 +42,11 @@ export function WelcomePage() {
                 <div className="mx-auto max-w-lg text-center space-y-8">
                     {/* Logo */}
                     <div className="flex justify-center">
-                        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary shadow-lg shadow-primary/30">
-                            <LuBot className="h-8 w-8 text-primary-foreground" />
-                        </div>
+                        <img
+                            src="/logo.svg"
+                            alt="Indie Copilot"
+                            className="h-20 w-20 drop-shadow-lg"
+                        />
                     </div>
 
                     {/* Headline */}

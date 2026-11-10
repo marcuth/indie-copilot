@@ -3,7 +3,6 @@ import {
     LuStickyNote,
     LuSettings,
     LuPlus,
-    LuBot,
     LuFolderOpen,
     LuChevronDown,
     LuTrash2,
@@ -65,9 +64,11 @@ export function AppSidebar() {
             <Sidebar className="border-r border-border/50" collapsible="icon">
                 <SidebarHeader className="p-4">
                     <div className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-                            <LuBot className="h-4 w-4 text-primary-foreground" />
-                        </div>
+                        <img
+                            src="/logo.svg"
+                            alt="Indie Copilot"
+                            className="h-8 w-8 shrink-0"
+                        />
                         <div className="flex flex-col">
                             <span className="font-heading text-sm font-bold leading-tight">
                                 Indie Copilot
