@@ -8,6 +8,15 @@ import type {
     ProjectNote,
     ProjectNoteCategory,
 } from "../../types"
+import {
+    dbBatch,
+    dbSelect,
+    insertIgnoreStatement,
+    upsertStatement,
+    type SqlRow,
+    type SqlStatement,
+    type SqlValue,
+} from "./sqlite"
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -19,45 +28,420 @@ function generateId(): string {
     return crypto.randomUUID()
 }
 
-// ─── Storage Keys ─────────────────────────────────────────────────────────────
+function clone<T>(value: T): T {
+    return structuredClone(value)
+}
 
-const KEYS = {
+function text(value: unknown): string | undefined {
+    return typeof value === "string" ? value : undefined
+}
+
+function requiredText(value: unknown): string {
+    return typeof value === "string" ? value : ""
+}
+
+function optional(value: string | undefined): string | null {
+    return value ?? null
+}
+
+// ─── Cache em memória ─────────────────────────────────────────────────────────
+//
+// O SQLite é a fonte de verdade. Na inicialização (initDatabase) tudo é lido
+// para a memória, o que mantém a API abaixo síncrona. Cada escrita atualiza o
+// cache e grava no banco imediatamente, em ordem, através de uma fila.
+
+interface Cache {
+    settings: AppSettings | null
+    providers: AiProvider[]
+    projects: Project[]
+    sessions: ChatSession[]
+    messages: ChatMessage[]
+    notes: ProjectNote[]
+}
+
+const cache: Cache = {
+    settings: null,
+    providers: [],
+    projects: [],
+    sessions: [],
+    messages: [],
+    notes: [],
+}
+
+let writeQueue: Promise<void> = Promise.resolve()
+
+function persist(statements: SqlStatement[]): void {
+    if (statements.length === 0) return
+
+    writeQueue = writeQueue
+        .then(() => dbBatch(statements))
+        .catch((error: unknown) => {
+            console.error("Falha ao gravar no banco de dados", error)
+        })
+}
+
+/** Aguarda todas as gravações pendentes terminarem. */
+export function flushDatabase(): Promise<void> {
+    return writeQueue
+}
+
+// ─── Mapeamento linha <-> objeto ──────────────────────────────────────────────
+
+const PLANNING_COLUMNS = [
+    ["problemSolution", "problem_solution"],
+    ["targetAudience", "target_audience"],
+    ["businessModel", "business_model"],
+    ["userAcquisition", "user_acquisition"],
+    ["marketing", "marketing"],
+    ["competition", "competition"],
+    ["team", "team"],
+    ["roadmap", "roadmap"],
+    ["infrastructure", "infrastructure"],
+    ["risks", "risks"],
+    ["swot", "swot"],
+    ["financials", "financials"],
+] as const
+
+function projectToRow(project: Project): Record<string, SqlValue> {
+    const row: Record<string, SqlValue> = {
+        id: project.id,
+        name: project.name,
+        description: optional(project.description),
+        website: optional(project.website),
+        slogan: optional(project.slogan),
+        already_exists: project.alreadyExists ? 1 : 0,
+        logo: optional(project.logo),
+        category_id: optional(project.categoryId),
+        created_at: project.createdAt,
+        updated_at: project.updatedAt,
+    }
+
+    for (const [field, column] of PLANNING_COLUMNS) {
+        row[column] = optional(project[field])
+    }
+
+    return row
+}
+
+function rowToProject(row: SqlRow): Project {
+    const categoryId = text(row.category_id)
+
+    const project: Project = {
+        id: requiredText(row.id),
+        name: requiredText(row.name),
+        description: text(row.description),
+        website: text(row.website),
+        slogan: text(row.slogan),
+        alreadyExists: Number(row.already_exists) === 1,
+        logo: text(row.logo),
+        categoryId,
+        category: resolveCategory(DEFAULT_CATEGORIES, categoryId),
+        createdAt: requiredText(row.created_at),
+        updatedAt: requiredText(row.updated_at),
+    }
+
+    for (const [field, column] of PLANNING_COLUMNS) {
+        project[field] = text(row[column])
+    }
+
+    return project
+}
+
+function providerToRow(provider: AiProvider): Record<string, SqlValue> {
+    return {
+        id: provider.id,
+        name: provider.name,
+        base_url: provider.baseUrl,
+        api_key: optional(provider.apiKey),
+        default_model: provider.defaultModel,
+        is_default: provider.isDefault ? 1 : 0,
+        created_at: provider.createdAt,
+        updated_at: provider.updatedAt,
+    }
+}
+
+function rowToProvider(row: SqlRow): AiProvider {
+    return {
+        id: requiredText(row.id),
+        name: requiredText(row.name),
+        baseUrl: requiredText(row.base_url),
+        apiKey: text(row.api_key),
+        defaultModel: requiredText(row.default_model),
+        isDefault: Number(row.is_default) === 1,
+        createdAt: requiredText(row.created_at),
+        updatedAt: requiredText(row.updated_at),
+    }
+}
+
+function sessionToRow(session: ChatSession): Record<string, SqlValue> {
+    return {
+        id: session.id,
+        project_id: session.projectId,
+        title: session.title,
+        created_at: session.createdAt,
+        updated_at: session.updatedAt,
+    }
+}
+
+function rowToSession(row: SqlRow): ChatSession {
+    return {
+        id: requiredText(row.id),
+        projectId: requiredText(row.project_id),
+        title: requiredText(row.title),
+        createdAt: requiredText(row.created_at),
+        updatedAt: requiredText(row.updated_at),
+        messages: [],
+    }
+}
+
+function messageToRow(message: ChatMessage): Record<string, SqlValue> {
+    return {
+        id: message.id,
+        session_id: message.sessionId,
+        role: message.role,
+        content: message.content,
+        context_used: optional(message.contextUsed),
+        model_used: optional(message.modelUsed),
+        created_at: message.createdAt,
+    }
+}
+
+function rowToMessage(row: SqlRow): ChatMessage {
+    return {
+        id: requiredText(row.id),
+        sessionId: requiredText(row.session_id),
+        role: requiredText(row.role) as ChatMessage["role"],
+        content: requiredText(row.content),
+        contextUsed: text(row.context_used),
+        modelUsed: text(row.model_used),
+        createdAt: requiredText(row.created_at),
+    }
+}
+
+function noteToRow(note: ProjectNote): Record<string, SqlValue> {
+    return {
+        id: note.id,
+        project_id: note.projectId,
+        content: note.content,
+        category_id: optional(note.categoryId),
+        created_at: note.createdAt,
+        updated_at: note.updatedAt,
+    }
+}
+
+function rowToNote(row: SqlRow): ProjectNote {
+    const categoryId = text(row.category_id)
+
+    return {
+        id: requiredText(row.id),
+        projectId: requiredText(row.project_id),
+        content: requiredText(row.content),
+        categoryId,
+        category: resolveNoteCategory(DEFAULT_NOTE_CATEGORIES, categoryId),
+        createdAt: requiredText(row.created_at),
+        updatedAt: requiredText(row.updated_at),
+    }
+}
+
+// ─── Inicialização e migração do localStorage ────────────────────────────────
+
+const LEGACY_KEYS = {
     SETTINGS: "indie-copilot:settings",
     PROVIDERS: "indie-copilot:providers",
-    CATEGORIES: "indie-copilot:categories",
-    NOTE_CATEGORIES: "indie-copilot:note-categories",
     PROJECTS: "indie-copilot:projects",
     SESSIONS: "indie-copilot:sessions",
     MESSAGES: "indie-copilot:messages",
     NOTES: "indie-copilot:notes",
 } as const
 
-// ─── Generic helpers ──────────────────────────────────────────────────────────
+const MIGRATION_FLAG = "indie-copilot:sqlite-migrated-at"
+const SETTINGS_KEY = "app"
 
-function load<T>(key: string, fallback: T): T {
+export interface MigrationReport {
+    projects: number
+    providers: number
+    sessions: number
+    messages: number
+    notes: number
+    skipped: number
+}
+
+function readLegacy<T>(key: string): T | null {
     try {
         const raw = localStorage.getItem(key)
-        if (!raw) return fallback
-        return JSON.parse(raw) as T
+        return raw ? (JSON.parse(raw) as T) : null
     } catch {
-        return fallback
+        return null
     }
 }
 
-function save<T>(key: string, value: T): void {
-    localStorage.setItem(key, JSON.stringify(value))
+function asArray<T>(value: T[] | null): T[] {
+    return Array.isArray(value) ? value : []
+}
+
+/**
+ * Copia os dados que estavam no localStorage para o SQLite.
+ *
+ * - Nunca apaga nem altera o localStorage (ele continua como cópia de segurança).
+ * - Tudo é gravado em uma única transação com INSERT OR IGNORE: se algo falhar
+ *   nada é gravado e a migração roda de novo na próxima abertura, sem duplicar.
+ */
+async function migrateFromLocalStorage(): Promise<MigrationReport | null> {
+    if (localStorage.getItem(MIGRATION_FLAG)) return null
+
+    const projects = asArray(readLegacy<Project[]>(LEGACY_KEYS.PROJECTS))
+    const providers = asArray(readLegacy<AiProvider[]>(LEGACY_KEYS.PROVIDERS))
+    const sessions = asArray(readLegacy<ChatSession[]>(LEGACY_KEYS.SESSIONS))
+    const notes = asArray(readLegacy<ProjectNote[]>(LEGACY_KEYS.NOTES))
+    const settings = readLegacy<AppSettings>(LEGACY_KEYS.SETTINGS)
+
+    // As mensagens ficavam em duas listas (a global e uma cópia dentro de cada
+    // sessão). A união pelo id garante que nenhuma se perca.
+    const messagesById = new Map<string, ChatMessage>()
+    for (const message of asArray(
+        readLegacy<ChatMessage[]>(LEGACY_KEYS.MESSAGES),
+    )) {
+        messagesById.set(message.id, message)
+    }
+    for (const session of sessions) {
+        for (const message of asArray(session.messages)) {
+            if (!messagesById.has(message.id)) {
+                messagesById.set(message.id, {
+                    ...message,
+                    sessionId: message.sessionId ?? session.id,
+                })
+            }
+        }
+    }
+
+    const projectIds = new Set(projects.map((project) => project.id))
+    const validSessions = sessions.filter((s) => projectIds.has(s.projectId))
+    const sessionIds = new Set(validSessions.map((session) => session.id))
+    const validMessages = [...messagesById.values()].filter((m) =>
+        sessionIds.has(m.sessionId),
+    )
+    const validNotes = notes.filter((note) => projectIds.has(note.projectId))
+
+    const skipped =
+        sessions.length -
+        validSessions.length +
+        (messagesById.size - validMessages.length) +
+        (notes.length - validNotes.length)
+
+    const statements: SqlStatement[] = [
+        ...projects.map((p) =>
+            insertIgnoreStatement("projects", projectToRow(p)),
+        ),
+        ...providers.map((p) =>
+            insertIgnoreStatement("ai_providers", providerToRow(p)),
+        ),
+        ...validSessions.map((s) =>
+            insertIgnoreStatement("chat_sessions", sessionToRow(s)),
+        ),
+        ...validMessages.map((m) =>
+            insertIgnoreStatement("chat_messages", messageToRow(m)),
+        ),
+        ...validNotes.map((n) =>
+            insertIgnoreStatement("project_notes", noteToRow(n)),
+        ),
+    ]
+
+    if (settings) {
+        statements.push(
+            insertIgnoreStatement("settings", {
+                key: SETTINGS_KEY,
+                value: JSON.stringify(settings),
+            }),
+        )
+    }
+
+    if (statements.length > 0) {
+        await dbBatch(statements)
+    }
+
+    localStorage.setItem(MIGRATION_FLAG, now())
+
+    return {
+        projects: projects.length,
+        providers: providers.length,
+        sessions: validSessions.length,
+        messages: validMessages.length,
+        notes: validNotes.length,
+        skipped,
+    }
+}
+
+async function loadCache(): Promise<void> {
+    const [settings, providers, projects, sessions, messages, notes] =
+        await Promise.all([
+            dbSelect("SELECT value FROM settings WHERE key = ?1", [
+                SETTINGS_KEY,
+            ]),
+            dbSelect("SELECT * FROM ai_providers ORDER BY created_at"),
+            dbSelect("SELECT * FROM projects ORDER BY created_at"),
+            dbSelect("SELECT * FROM chat_sessions ORDER BY created_at"),
+            dbSelect("SELECT * FROM chat_messages ORDER BY created_at, rowid"),
+            dbSelect("SELECT * FROM project_notes ORDER BY created_at"),
+        ])
+
+    cache.settings = settings[0]
+        ? (JSON.parse(requiredText(settings[0].value)) as AppSettings)
+        : null
+    cache.providers = providers.map(rowToProvider)
+    cache.projects = projects.map(rowToProject)
+    cache.sessions = sessions.map(rowToSession)
+    cache.messages = messages.map(rowToMessage)
+    cache.notes = notes.map(rowToNote)
+}
+
+let initialization: Promise<MigrationReport | null> | null = null
+
+/**
+ * Abre o banco, migra os dados antigos do localStorage (uma única vez por
+ * origem) e carrega tudo para a memória. Deve ser aguardada antes de renderizar.
+ */
+export function initDatabase(): Promise<MigrationReport | null> {
+    initialization ??= (async () => {
+        const report = await migrateFromLocalStorage()
+        await loadCache()
+
+        if (report) {
+            console.info("Dados migrados do localStorage para o SQLite", report)
+        }
+
+        return report
+    })()
+
+    return initialization
+}
+
+/** Dados completos, no mesmo formato dos backups antigos (chaves "indie-copilot:*"). */
+export function exportAllData(): Record<string, unknown> {
+    return {
+        [LEGACY_KEYS.SETTINGS]: getSettings(),
+        [LEGACY_KEYS.PROVIDERS]: getProviders(),
+        [LEGACY_KEYS.PROJECTS]: getProjects(),
+        [LEGACY_KEYS.SESSIONS]: getChatSessions().map((session) => ({
+            ...session,
+            messages: getMessages(session.id),
+        })),
+        [LEGACY_KEYS.MESSAGES]: getMessages(),
+        [LEGACY_KEYS.NOTES]: getNotes(),
+    }
 }
 
 // ─── AppSettings ──────────────────────────────────────────────────────────────
 
 export function getSettings(): AppSettings {
-    return load<AppSettings>(KEYS.SETTINGS, {
+    if (cache.settings) return clone(cache.settings)
+
+    return {
         id: "default",
         theme: "system",
         language: "pt-BR",
         createdAt: now(),
         updatedAt: now(),
-    })
+    }
 }
 
 export function saveSettings(
@@ -65,20 +449,34 @@ export function saveSettings(
 ): AppSettings {
     const current = getSettings()
     const updated: AppSettings = { ...current, ...data, updatedAt: now() }
-    save(KEYS.SETTINGS, updated)
-    return updated
+    cache.settings = updated
+    persist([
+        upsertStatement(
+            "settings",
+            { key: SETTINGS_KEY, value: JSON.stringify(updated) },
+            "key",
+        ),
+    ])
+    return clone(updated)
 }
 
 // ─── AiProvider ───────────────────────────────────────────────────────────────
 
 export function getProviders(): AiProvider[] {
-    return load<AiProvider[]>(KEYS.PROVIDERS, [])
+    return clone(cache.providers)
+}
+
+function persistProviders(): void {
+    persist(
+        cache.providers.map((provider) =>
+            upsertStatement("ai_providers", providerToRow(provider)),
+        ),
+    )
 }
 
 export function createProvider(
     data: Omit<AiProvider, "id" | "createdAt" | "updatedAt">,
 ): AiProvider {
-    const providers = getProviders()
     const provider: AiProvider = {
         ...data,
         id: generateId(),
@@ -86,31 +484,34 @@ export function createProvider(
         updatedAt: now(),
     }
     if (data.isDefault) {
-        providers.forEach((p) => (p.isDefault = false))
+        cache.providers.forEach((p) => (p.isDefault = false))
     }
-    providers.push(provider)
-    save(KEYS.PROVIDERS, providers)
-    return provider
+    cache.providers.push(provider)
+    persistProviders()
+    return clone(provider)
 }
 
 export function updateProvider(
     id: string,
     data: Partial<Omit<AiProvider, "id" | "createdAt">>,
 ): AiProvider | null {
-    const providers = getProviders()
-    const idx = providers.findIndex((p) => p.id === id)
+    const idx = cache.providers.findIndex((p) => p.id === id)
     if (idx === -1) return null
     if (data.isDefault) {
-        providers.forEach((p) => (p.isDefault = false))
+        cache.providers.forEach((p) => (p.isDefault = false))
     }
-    providers[idx] = { ...providers[idx], ...data, updatedAt: now() }
-    save(KEYS.PROVIDERS, providers)
-    return providers[idx]
+    cache.providers[idx] = {
+        ...cache.providers[idx],
+        ...data,
+        updatedAt: now(),
+    }
+    persistProviders()
+    return clone(cache.providers[idx])
 }
 
 export function deleteProvider(id: string): void {
-    const providers = getProviders().filter((p) => p.id !== id)
-    save(KEYS.PROVIDERS, providers)
+    cache.providers = cache.providers.filter((p) => p.id !== id)
+    persist([{ sql: "DELETE FROM ai_providers WHERE id = ?1", params: [id] }])
 }
 
 export function getDefaultProvider(): AiProvider | undefined {
@@ -169,23 +570,6 @@ export const DEFAULT_CATEGORIES: ProjectCategory[] = [
 ]
 
 export function getCategories(): ProjectCategory[] {
-    const raw = localStorage.getItem(KEYS.CATEGORIES)
-    if (!raw) {
-        save(KEYS.CATEGORIES, DEFAULT_CATEGORIES)
-        return DEFAULT_CATEGORIES
-    }
-    try {
-        const parsed = JSON.parse(raw) as ProjectCategory[]
-        if (
-            Array.isArray(parsed) &&
-            parsed.length >= DEFAULT_CATEGORIES.length
-        ) {
-            return parsed
-        }
-    } catch {
-        // fallback
-    }
-    save(KEYS.CATEGORIES, DEFAULT_CATEGORIES)
     return DEFAULT_CATEGORIES
 }
 
@@ -204,30 +588,13 @@ export const DEFAULT_NOTE_CATEGORIES: ProjectNoteCategory[] = [
 ]
 
 export function getNoteCategories(): ProjectNoteCategory[] {
-    const raw = localStorage.getItem(KEYS.NOTE_CATEGORIES)
-    if (!raw) {
-        save(KEYS.NOTE_CATEGORIES, DEFAULT_NOTE_CATEGORIES)
-        return DEFAULT_NOTE_CATEGORIES
-    }
-    try {
-        const parsed = JSON.parse(raw) as ProjectNoteCategory[]
-        if (
-            Array.isArray(parsed) &&
-            parsed.length >= DEFAULT_NOTE_CATEGORIES.length
-        ) {
-            return parsed
-        }
-    } catch {
-        // fallback
-    }
-    save(KEYS.NOTE_CATEGORIES, DEFAULT_NOTE_CATEGORIES)
     return DEFAULT_NOTE_CATEGORIES
 }
 
 // ─── Project ──────────────────────────────────────────────────────────────────
 
 export function getProjects(): Project[] {
-    return load<Project[]>(KEYS.PROJECTS, [])
+    return clone(cache.projects)
 }
 
 export function getProjectById(id: string): Project | undefined {
@@ -246,8 +613,6 @@ export function createProject(
     data: Pick<Project, "name"> &
         Partial<Omit<Project, "id" | "createdAt" | "updatedAt">>,
 ): Project {
-    const projects = getProjects()
-    const categories = getCategories()
     const project: Project = {
         name: data.name,
         description: data.description,
@@ -256,55 +621,65 @@ export function createProject(
         alreadyExists: data.alreadyExists ?? false,
         logo: data.logo,
         categoryId: data.categoryId,
-        category: resolveCategory(categories, data.categoryId),
+        category: resolveCategory(getCategories(), data.categoryId),
         id: generateId(),
         createdAt: now(),
         updatedAt: now(),
     }
-    projects.push(project)
-    save(KEYS.PROJECTS, projects)
-    return project
+    cache.projects.push(project)
+    persist([upsertStatement("projects", projectToRow(project))])
+    return clone(project)
 }
 
 export function updateProject(
     id: string,
     data: Partial<Omit<Project, "id" | "createdAt">>,
 ): Project | null {
-    const projects = getProjects()
-    const categories = getCategories()
-    const idx = projects.findIndex((p) => p.id === id)
+    const idx = cache.projects.findIndex((p) => p.id === id)
     if (idx === -1) return null
-    if (data.categoryId !== undefined) {
-        data.category = resolveCategory(categories, data.categoryId)
+    const patch = { ...data }
+    if (patch.categoryId !== undefined) {
+        patch.category = resolveCategory(getCategories(), patch.categoryId)
     }
-    projects[idx] = { ...projects[idx], ...data, updatedAt: now() }
-    save(KEYS.PROJECTS, projects)
-    return projects[idx]
+    cache.projects[idx] = { ...cache.projects[idx], ...patch, updatedAt: now() }
+    persist([upsertStatement("projects", projectToRow(cache.projects[idx]))])
+    return clone(cache.projects[idx])
 }
 
 export function deleteProject(id: string): void {
-    const projects = getProjects().filter((p) => p.id !== id)
-    save(KEYS.PROJECTS, projects)
-    // cascade delete sessions, notes
-    const sessions = getChatSessions().filter((s) => s.projectId !== id)
-    save(KEYS.SESSIONS, sessions)
-    const notes = getNotes().filter((n) => n.projectId !== id)
-    save(KEYS.NOTES, notes)
+    const sessionIds = new Set(
+        cache.sessions.filter((s) => s.projectId === id).map((s) => s.id),
+    )
+    cache.projects = cache.projects.filter((p) => p.id !== id)
+    cache.sessions = cache.sessions.filter((s) => s.projectId !== id)
+    cache.messages = cache.messages.filter((m) => !sessionIds.has(m.sessionId))
+    cache.notes = cache.notes.filter((n) => n.projectId !== id)
+    // sessões, mensagens e notas saem em cascata (ON DELETE CASCADE)
+    persist([{ sql: "DELETE FROM projects WHERE id = ?1", params: [id] }])
 }
 
 // ─── ChatSession ──────────────────────────────────────────────────────────────
 
+function withMessages(session: ChatSession): ChatSession {
+    return {
+        ...clone(session),
+        messages: clone(
+            cache.messages.filter((m) => m.sessionId === session.id),
+        ),
+    }
+}
+
 export function getChatSessions(projectId?: string): ChatSession[] {
-    const sessions = load<ChatSession[]>(KEYS.SESSIONS, [])
-    if (projectId) return sessions.filter((s) => s.projectId === projectId)
-    return sessions
+    const sessions = projectId
+        ? cache.sessions.filter((s) => s.projectId === projectId)
+        : cache.sessions
+    return sessions.map(withMessages)
 }
 
 export function createChatSession(
     projectId: string,
     title?: string,
 ): ChatSession {
-    const sessions = getChatSessions()
     const session: ChatSession = {
         id: generateId(),
         createdAt: now(),
@@ -313,40 +688,38 @@ export function createChatSession(
         projectId,
         messages: [],
     }
-    sessions.push(session)
-    save(KEYS.SESSIONS, sessions)
-    return session
+    cache.sessions.push(session)
+    persist([upsertStatement("chat_sessions", sessionToRow(session))])
+    return clone(session)
 }
 
 export function renameChatSession(id: string, title: string): void {
-    const sessions = getChatSessions()
-    const idx = sessions.findIndex((s) => s.id === id)
-    if (idx === -1) return
-    sessions[idx].title = title
-    sessions[idx].updatedAt = now()
-    save(KEYS.SESSIONS, sessions)
+    const session = cache.sessions.find((s) => s.id === id)
+    if (!session) return
+    session.title = title
+    session.updatedAt = now()
+    persist([upsertStatement("chat_sessions", sessionToRow(session))])
 }
 
 export function deleteChatSession(id: string): void {
-    const sessions = getChatSessions().filter((s) => s.id !== id)
-    save(KEYS.SESSIONS, sessions)
-    const messages = getMessages().filter((m) => m.sessionId !== id)
-    save(KEYS.MESSAGES, messages)
+    cache.sessions = cache.sessions.filter((s) => s.id !== id)
+    cache.messages = cache.messages.filter((m) => m.sessionId !== id)
+    persist([{ sql: "DELETE FROM chat_sessions WHERE id = ?1", params: [id] }])
 }
 
 // ─── ChatMessage ──────────────────────────────────────────────────────────────
 
 export function getMessages(sessionId?: string): ChatMessage[] {
-    const messages = load<ChatMessage[]>(KEYS.MESSAGES, [])
-    if (sessionId) return messages.filter((m) => m.sessionId === sessionId)
-    return messages
+    const messages = sessionId
+        ? cache.messages.filter((m) => m.sessionId === sessionId)
+        : cache.messages
+    return clone(messages)
 }
 
 export function addMessage(
     data: Pick<ChatMessage, "role" | "content" | "sessionId"> &
         Partial<Pick<ChatMessage, "contextUsed" | "modelUsed">>,
 ): ChatMessage {
-    const messages = getMessages()
     const message: ChatMessage = {
         id: generateId(),
         createdAt: now(),
@@ -356,25 +729,30 @@ export function addMessage(
         modelUsed: data.modelUsed,
         sessionId: data.sessionId,
     }
-    messages.push(message)
-    save(KEYS.MESSAGES, messages)
-    // update session updatedAt
-    const sessions = getChatSessions()
-    const idx = sessions.findIndex((s) => s.id === data.sessionId)
-    if (idx !== -1) {
-        sessions[idx].updatedAt = now()
-        sessions[idx].messages = getMessages(data.sessionId)
-        save(KEYS.SESSIONS, sessions)
+    cache.messages.push(message)
+
+    const statements: SqlStatement[] = [
+        upsertStatement("chat_messages", messageToRow(message)),
+    ]
+
+    // atualiza o updatedAt da sessão
+    const session = cache.sessions.find((s) => s.id === data.sessionId)
+    if (session) {
+        session.updatedAt = now()
+        statements.push(upsertStatement("chat_sessions", sessionToRow(session)))
     }
-    return message
+
+    persist(statements)
+    return clone(message)
 }
 
 // ─── ProjectNote ──────────────────────────────────────────────────────────────
 
 export function getNotes(projectId?: string): ProjectNote[] {
-    const notes = load<ProjectNote[]>(KEYS.NOTES, [])
-    if (projectId) return notes.filter((n) => n.projectId === projectId)
-    return notes
+    const notes = projectId
+        ? cache.notes.filter((n) => n.projectId === projectId)
+        : cache.notes
+    return clone(notes)
 }
 
 function resolveNoteCategory(
@@ -389,8 +767,6 @@ export function createNote(
     data: Pick<ProjectNote, "content" | "projectId"> &
         Partial<Pick<ProjectNote, "categoryId">>,
 ): ProjectNote {
-    const notes = getNotes()
-    const categories = getNoteCategories()
     const note: ProjectNote = {
         id: generateId(),
         createdAt: now(),
@@ -398,36 +774,34 @@ export function createNote(
         content: data.content,
         projectId: data.projectId,
         categoryId: data.categoryId,
-        category: resolveNoteCategory(categories, data.categoryId),
+        category: resolveNoteCategory(getNoteCategories(), data.categoryId),
     }
-    notes.push(note)
-    save(KEYS.NOTES, notes)
-    return note
+    cache.notes.push(note)
+    persist([upsertStatement("project_notes", noteToRow(note))])
+    return clone(note)
 }
 
 export function updateNote(
     id: string,
     data: Partial<Pick<ProjectNote, "content" | "categoryId">>,
 ): ProjectNote | null {
-    const notes = getNotes()
-    const categories = getNoteCategories()
-    const idx = notes.findIndex((n) => n.id === id)
+    const idx = cache.notes.findIndex((n) => n.id === id)
     if (idx === -1) return null
     const updatedCategory =
         data.categoryId !== undefined
-            ? resolveNoteCategory(categories, data.categoryId)
-            : notes[idx].category
-    notes[idx] = {
-        ...notes[idx],
+            ? resolveNoteCategory(getNoteCategories(), data.categoryId)
+            : cache.notes[idx].category
+    cache.notes[idx] = {
+        ...cache.notes[idx],
         ...data,
         category: updatedCategory,
         updatedAt: now(),
     }
-    save(KEYS.NOTES, notes)
-    return notes[idx]
+    persist([upsertStatement("project_notes", noteToRow(cache.notes[idx]))])
+    return clone(cache.notes[idx])
 }
 
 export function deleteNote(id: string): void {
-    const notes = getNotes().filter((n) => n.id !== id)
-    save(KEYS.NOTES, notes)
+    cache.notes = cache.notes.filter((n) => n.id !== id)
+    persist([{ sql: "DELETE FROM project_notes WHERE id = ?1", params: [id] }])
 }

@@ -9,6 +9,7 @@ import {
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs"
 import { AiProvidersSettings } from "./ai-providers-settings"
+import { exportAllData } from "../../lib/db/database-client"
 import { useTheme } from "../../contexts/theme-context"
 import { Separator } from "../ui/separator"
 import { Button } from "../ui/button"
@@ -17,17 +18,7 @@ export function SettingsPage() {
     const { theme, setTheme } = useTheme()
 
     const handleExport = () => {
-        const data: Record<string, unknown> = {}
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i)!
-            if (key.startsWith("indie-copilot:")) {
-                try {
-                    data[key] = JSON.parse(localStorage.getItem(key)!)
-                } catch {
-                    data[key] = localStorage.getItem(key)
-                }
-            }
-        }
+        const data = exportAllData()
         const blob = new Blob([JSON.stringify(data, null, 2)], {
             type: "application/json",
         })
