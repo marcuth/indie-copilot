@@ -36,9 +36,11 @@ import {
     isPlanningSectionFilled,
 } from "../../lib/planning"
 import { useActiveProject } from "../../contexts/active-project-context"
+import { DeleteProjectDialog } from "../project/delete-project-dialog"
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar"
 import { NewProjectDialog } from "../project/new-project-dialog"
 import { ScrollArea } from "../ui/scroll-area"
+import type { Project } from "../../types"
 import { Progress } from "../ui/progress"
 import { Button } from "../ui/button"
 import { Badge } from "../ui/badge"
@@ -49,6 +51,21 @@ export function AppSidebar() {
     const navigate = useNavigate()
     const location = useLocation()
     const [newProjectOpen, setNewProjectOpen] = useState(false)
+    const [projectToDelete, setProjectToDelete] = useState<Project | null>(null)
+
+    const handleConfirmDelete = (project: Project) => {
+        const isViewingDeleted = location.pathname.includes(
+            `/project/${project.id}/`,
+        )
+        const next = projects.find((p) => p.id !== project.id)
+
+        removeProject(project.id)
+        setProjectToDelete(null)
+
+        if (isViewingDeleted) {
+            navigate(next ? `/project/${next.id}/overview` : "/")
+        }
+    }
 
     const navigateTo = (path: string) => {
         if (!activeProject) return
@@ -118,7 +135,7 @@ export function AppSidebar() {
                                 )}
                                 {projects.map((project) => (
                                     <SidebarMenuItem key={project.id}>
-                                        <DropdownMenu>
+                                        <DropdownMenu modal={false}>
                                             <DropdownMenuTrigger asChild>
                                                 <SidebarMenuButton
                                                     isActive={
@@ -178,9 +195,9 @@ export function AppSidebar() {
                                                 <DropdownMenuSeparator />
                                                 <DropdownMenuItem
                                                     className="text-destructive"
-                                                    onClick={() =>
-                                                        removeProject(
-                                                            project.id,
+                                                    onSelect={() =>
+                                                        setProjectToDelete(
+                                                            project,
                                                         )
                                                     }
                                                 >
@@ -339,6 +356,12 @@ export function AppSidebar() {
                     </SidebarMenu>
                 </SidebarFooter>
             </Sidebar>
+
+            <DeleteProjectDialog
+                project={projectToDelete}
+                onCancel={() => setProjectToDelete(null)}
+                onConfirm={handleConfirmDelete}
+            />
 
             <NewProjectDialog
                 open={newProjectOpen}
