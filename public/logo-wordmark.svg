@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 256" role="img" aria-labelledby="title">
+    <title id="title">Indie Copilot</title>
+    <rect x="16" y="16" width="224" height="224" rx="56" fill="#b9e300" />
+    <rect x="108" y="126" width="40" height="92" rx="20" fill="#1a1a1a" />
+    <path
+        d="M128 36C132 58 144 70 166 74C144 78 132 90 128 112C124 90 112 78 90 74C112 70 124 58 128 36Z"
+        fill="#1a1a1a"
+    />
+    <path
+        d="M184 42C185 51 188 54 197 55C188 56 185 59 184 68C183 59 180 56 171 55C180 54 183 51 184 42Z"
+        fill="#1a1a1a"
+    />
+    <text
+        x="280"
+        y="152"
+        font-family="'Merriweather Variable', Merriweather, Georgia, serif"
+        font-size="76"
+        font-weight="700"
+        fill="#1a1a1a"
+    >
+        Indie Copilot
+    </text>
+</svg>
