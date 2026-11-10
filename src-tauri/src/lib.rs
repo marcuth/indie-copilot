@@ -1,14 +1,50 @@
-// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
+mod db;
+
+use std::sync::Mutex;
+
+use serde_json::{Map, Value};
+use tauri::{Manager, State};
+
+use db::{Database, Statement};
+
 #[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
+fn db_select(
+    state: State<'_, Database>,
+    sql: String,
+    params: Vec<Value>,
+) -> Result<Vec<Map<String, Value>>, String> {
+    let conn = state.0.lock().map_err(|e| e.to_string())?;
+    db::select(&conn, &sql, &params)
+}
+
+#[tauri::command]
+fn db_execute(
+    state: State<'_, Database>,
+    sql: String,
+    params: Vec<Value>,
+) -> Result<usize, String> {
+    let conn = state.0.lock().map_err(|e| e.to_string())?;
+    db::execute(&conn, &sql, &params)
+}
+
+#[tauri::command]
+fn db_batch(state: State<'_, Database>, statements: Vec<Statement>) -> Result<(), String> {
+    let mut conn = state.0.lock().map_err(|e| e.to_string())?;
+    db::batch(&mut conn, &statements)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet])
+        .setup(|app| {
+            let dir = app.path().app_data_dir()?;
+            std::fs::create_dir_all(&dir)?;
+            let conn = db::open(&dir.join("indie-copilot.db"))?;
+            app.manage(Database(Mutex::new(conn)));
+            Ok(())
+        })
+        .invoke_handler(tauri::generate_handler![db_select, db_execute, db_batch])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
