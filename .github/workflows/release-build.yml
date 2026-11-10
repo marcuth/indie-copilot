@@ -1,0 +1,80 @@
+name: Release Build (Linux and macOS)
+
+on:
+    workflow_dispatch:
+        inputs:
+            tag:
+                description: "Tag de uma release já publicada (ex.: v0.1.0)"
+                required: true
+                type: string
+
+permissions:
+    contents: write
+
+jobs:
+    check-release:
+        name: Verify release exists
+        runs-on: ubuntu-latest
+        steps:
+            - name: Check that the release exists
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: gh release view "${{ inputs.tag }}" --repo "${{ github.repository }}"
+
+    build:
+        name: Build (${{ matrix.name }})
+        needs: check-release
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    - name: macOS (Apple Silicon)
+                      platform: macos-latest
+                      args: "--target aarch64-apple-darwin"
+                    - name: macOS (Intel)
+                      platform: macos-latest
+                      args: "--target x86_64-apple-darwin"
+                    - name: Linux
+                      platform: ubuntu-22.04
+                      args: ""
+        runs-on: ${{ matrix.platform }}
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  ref: ${{ inputs.tag }}
+
+            - name: Install dependencies (Linux only)
+              if: matrix.platform == 'ubuntu-22.04'
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+            - name: Setup Node
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 20
+                  cache: "npm"
+
+            - name: Setup Rust
+              uses: dtolnay/rust-toolchain@stable
+              with:
+                  targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+            - name: Rust Cache
+              uses: swatinem/rust-cache@v2
+              with:
+                  workspaces: "./src-tauri -> target"
+                  key: ${{ matrix.args }}
+
+            - name: Install frontend dependencies
+              run: npm ci
+
+            - name: Build and upload to the release
+              uses: tauri-apps/tauri-action@v0
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              with:
+                  tagName: ${{ inputs.tag }}
+                  releaseDraft: false
+                  prerelease: false
+                  args: ${{ matrix.args }}
