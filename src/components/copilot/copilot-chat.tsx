@@ -28,8 +28,8 @@ import {
     InputGroupButton,
     InputGroupTextarea,
 } from "@/components/ui/input-group"
-import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
 import { useCopilotChat } from "@/hooks/use-copilot-chat"
 import { Button } from "@/components/ui/button"
 import type { Project } from "@/types"
@@ -57,7 +57,7 @@ const QUICK_ACTIONS = [
     },
     {
         label: "🎯 Sugerir SWOT",
-        prompt: "Com base no contexto do projeto, gere uma análise SWOT completa em formato JSON.",
+        prompt: "Com base no contexto do projeto, gere uma análise SWOT completa, com Forças, Fraquezas, Oportunidades e Ameaças em listas.",
     },
     {
         label: "👥 Criar Persona",
