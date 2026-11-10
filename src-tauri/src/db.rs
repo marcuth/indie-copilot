@@ -147,7 +147,8 @@ pub fn select(
         })
         .map_err(|e| e.to_string())?;
 
-    rows.collect::<Result<Vec<_>, _>>().map_err(|e| e.to_string())
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())
 }
 
 pub fn execute(conn: &Connection, sql: &str, params: &[Value]) -> Result<usize, String> {
@@ -215,11 +216,17 @@ mod tests {
 
     #[test]
     fn open_creates_a_database_file() {
-        let path = std::env::temp_dir().join(format!("indie-copilot-test-{}.db", std::process::id()));
+        let path =
+            std::env::temp_dir().join(format!("indie-copilot-test-{}.db", std::process::id()));
         let _ = std::fs::remove_file(&path);
 
         let conn = open(&path).unwrap();
-        execute(&conn, "INSERT INTO settings (key, value) VALUES ('a', 'b')", &[]).unwrap();
+        execute(
+            &conn,
+            "INSERT INTO settings (key, value) VALUES ('a', 'b')",
+            &[],
+        )
+        .unwrap();
         drop(conn);
 
         let reopened = open(&path).unwrap();
@@ -234,7 +241,9 @@ mod tests {
 
     #[test]
     fn open_fails_for_an_invalid_path() {
-        let path = std::env::temp_dir().join("indie-copilot-missing-dir").join("x.db");
+        let path = std::env::temp_dir()
+            .join("indie-copilot-missing-dir")
+            .join("x.db");
         assert!(open(&path).is_err());
     }
 
@@ -247,7 +256,13 @@ mod tests {
         execute(
             &conn,
             "INSERT INTO t (n, f, s, b, z) VALUES (?1, ?2, ?3, ?4, ?5)",
-            &[json!(true), json!(1.5), json!({"a": 1}), json!([1, 2]), Value::Null],
+            &[
+                json!(true),
+                json!(1.5),
+                json!({"a": 1}),
+                json!([1, 2]),
+                Value::Null,
+            ],
         )
         .unwrap();
         conn.execute("UPDATE t SET b = X'0102'", []).unwrap();

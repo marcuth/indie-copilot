@@ -10,20 +10,9 @@ import {
     DialogHeader,
     DialogTitle,
 } from "../ui/dialog"
-import { exportBackup, restoreBackup } from "../../lib/db/database-client"
+import { restoreBackup } from "../../lib/db/database-client"
+import { saveBackupToFile } from "../../lib/db/backup-file"
 import { Button } from "../ui/button"
-
-function downloadBackup(): void {
-    const blob = new Blob([JSON.stringify(exportBackup(), null, 2)], {
-        type: "application/json",
-    })
-    const url = URL.createObjectURL(blob)
-    const anchor = document.createElement("a")
-    anchor.href = url
-    anchor.download = `indie-copilot-backup-${new Date().toISOString().slice(0, 10)}.json`
-    anchor.click()
-    URL.revokeObjectURL(url)
-}
 
 function formatDate(iso?: string): string | null {
     if (!iso) return null
@@ -37,6 +26,29 @@ export function BackupSettings(): ReactElement {
     const [fileName, setFileName] = useState("")
     const [error, setError] = useState<string | null>(null)
     const [restoring, setRestoring] = useState(false)
+    const [saving, setSaving] = useState(false)
+    const [savedPath, setSavedPath] = useState<string | null>(null)
+    const [saveError, setSaveError] = useState<string | null>(null)
+
+    const handleSave = async (): Promise<void> => {
+        setSaving(true)
+        setSavedPath(null)
+        setSaveError(null)
+
+        try {
+            // Abre o "Salvar como" do sistema; null significa que cancelou
+            setSavedPath(await saveBackupToFile())
+        } catch (err) {
+            console.error("Falha ao salvar o backup", err)
+            setSaveError(
+                typeof err === "string"
+                    ? err
+                    : "Não foi possível salvar o backup.",
+            )
+        } finally {
+            setSaving(false)
+        }
+    }
 
     const handleFileChange = async (
         event: React.ChangeEvent<HTMLInputElement>,
@@ -89,13 +101,26 @@ export function BackupSettings(): ReactElement {
                     <p className="mt-1 text-xs text-muted-foreground">
                         Gera um arquivo JSON com todos os projetos, notas,
                         conversas, provedores de IA e configurações salvos no
-                        banco de dados.
+                        banco de dados. Você escolhe onde salvá-lo.
                     </p>
                 </div>
-                <Button onClick={downloadBackup}>
+                <Button disabled={saving} onClick={() => void handleSave()}>
                     <LuDownload className="mr-2 h-4 w-4" />
-                    Baixar backup (.json)
+                    {saving ? "Salvando..." : "Salvar backup como..."}
                 </Button>
+                {savedPath && (
+                    <p className="break-all text-xs text-muted-foreground">
+                        Backup salvo em{" "}
+                        <span className="font-mono text-foreground">
+                            {savedPath}
+                        </span>
+                    </p>
+                )}
+                {saveError && (
+                    <p role="alert" className="text-xs text-destructive">
+                        {saveError}
+                    </p>
+                )}
             </div>
 
             <div className="space-y-4 rounded-xl border border-border/50 bg-card p-6">
@@ -189,11 +214,17 @@ export function BackupSettings(): ReactElement {
                                 type="button"
                                 variant="outline"
                                 size="sm"
-                                onClick={downloadBackup}
+                                disabled={saving}
+                                onClick={() => void handleSave()}
                             >
                                 <LuDownload className="mr-2 h-4 w-4" />
-                                Baixar backup dos dados atuais primeiro
+                                Salvar backup dos dados atuais primeiro
                             </Button>
+                            {savedPath && (
+                                <p className="break-all text-xs text-muted-foreground">
+                                    Salvo em {savedPath}
+                                </p>
+                            )}
 
                             {error && (
                                 <p
