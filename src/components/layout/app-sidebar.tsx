@@ -36,8 +36,8 @@ import {
     isPlanningSectionFilled,
 } from "../../lib/planning"
 import { useActiveProject } from "../../contexts/active-project-context"
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar"
 import { NewProjectDialog } from "../project/new-project-dialog"
-import { Avatar, AvatarFallback } from "../ui/avatar"
 import { ScrollArea } from "../ui/scroll-area"
 import { Progress } from "../ui/progress"
 import { Button } from "../ui/button"
@@ -136,7 +136,15 @@ export function AppSidebar() {
                                                     }}
                                                 >
                                                     <div className="flex items-center gap-2 truncate">
-                                                        <Avatar className="h-5 w-5 text-[10px]">
+                                                        <Avatar className="h-5 w-5 rounded-md text-[10px]">
+                                                            <AvatarImage
+                                                                src={
+                                                                    project.logo
+                                                                }
+                                                                alt={
+                                                                    project.name
+                                                                }
+                                                            />
                                                             <AvatarFallback className="bg-primary/20 text-primary">
                                                                 {project.name
                                                                     .charAt(0)

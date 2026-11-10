@@ -254,7 +254,7 @@ export function createProject(
         website: data.website,
         slogan: data.slogan,
         alreadyExists: data.alreadyExists ?? false,
-        logoLocalPath: data.logoLocalPath,
+        logo: data.logo,
         categoryId: data.categoryId,
         category: resolveCategory(categories, data.categoryId),
         id: generateId(),

@@ -19,6 +19,7 @@ import {
 } from "../ui/select"
 import { useActiveProject } from "../../contexts/active-project-context"
 import { getCategories } from "../../lib/db/database-client"
+import { LogoUpload } from "./logo-upload"
 import { Textarea } from "../ui/textarea"
 import { Button } from "../ui/button"
 import { Input } from "../ui/input"
@@ -42,6 +43,7 @@ export function NewProjectDialog({
     const [categoryId, setCategoryId] = useState<string>("")
     const [slogan, setSlogan] = useState("")
     const [website, setWebsite] = useState("")
+    const [logo, setLogo] = useState<string | undefined>(undefined)
 
     const handleCreate = () => {
         if (!name.trim()) return
@@ -51,6 +53,7 @@ export function NewProjectDialog({
             categoryId: categoryId || undefined,
             slogan: slogan.trim() || undefined,
             website: website.trim() || undefined,
+            logo,
         })
         // Reset
         setName("")
@@ -58,6 +61,7 @@ export function NewProjectDialog({
         setCategoryId("")
         setSlogan("")
         setWebsite("")
+        setLogo(undefined)
         onOpenChange(false)
         navigate(`/project/${project.id}/overview`)
     }
@@ -77,6 +81,12 @@ export function NewProjectDialog({
                 </DialogHeader>
 
                 <div className="flex flex-col gap-4 py-2">
+                    <LogoUpload
+                        value={logo}
+                        onChange={setLogo}
+                        projectName={name}
+                    />
+
                     <div className="flex flex-col gap-1.5">
                         <Label htmlFor="project-name">
                             Nome do Projeto{" "}

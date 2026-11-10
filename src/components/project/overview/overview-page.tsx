@@ -9,6 +9,7 @@ import { LuBot, LuExternalLink, LuPencil, LuCheck, LuX } from "react-icons/lu"
 import { ReferencesTrigger } from "@/components/project/references-sheet"
 import { useActiveProject } from "@/contexts/active-project-context"
 import { CopilotChat } from "@/components/copilot/copilot-chat"
+import { LogoUpload } from "@/components/project/logo-upload"
 import { getCategories } from "@/lib/db/database-client"
 import { Separator } from "@/components/ui/separator"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -32,6 +33,7 @@ export function OverviewPage() {
         activeProject?.description ?? "",
     )
     const [website, setWebsite] = useState(activeProject?.website ?? "")
+    const [logo, setLogo] = useState<string | undefined>(activeProject?.logo)
     const [categoryId, setCategoryId] = useState(
         activeProject?.categoryId ?? "",
     )
@@ -45,6 +47,7 @@ export function OverviewPage() {
             setSlogan(activeProject.slogan ?? "")
             setDescription(activeProject.description ?? "")
             setWebsite(activeProject.website ?? "")
+            setLogo(activeProject.logo)
             setCategoryId(activeProject.categoryId ?? "")
             setAlreadyExists(activeProject.alreadyExists ?? false)
         }
@@ -68,6 +71,7 @@ export function OverviewPage() {
             slogan: slogan.trim() || undefined,
             description: description.trim() || undefined,
             website: website.trim() || undefined,
+            logo,
             categoryId: categoryId || undefined,
             alreadyExists,
         })
@@ -79,6 +83,7 @@ export function OverviewPage() {
         setSlogan(activeProject.slogan ?? "")
         setDescription(activeProject.description ?? "")
         setWebsite(activeProject.website ?? "")
+        setLogo(activeProject.logo)
         setCategoryId(activeProject.categoryId ?? "")
         setAlreadyExists(activeProject.alreadyExists)
         setEditing(false)
@@ -156,6 +161,21 @@ export function OverviewPage() {
                                 Identidade do Projeto
                             </h2>
                             <div className="grid gap-4">
+                                {editing ? (
+                                    <LogoUpload
+                                        value={logo}
+                                        onChange={setLogo}
+                                        projectName={name}
+                                    />
+                                ) : (
+                                    activeProject.logo && (
+                                        <img
+                                            src={activeProject.logo}
+                                            alt={`Logo de ${activeProject.name}`}
+                                            className="size-20 rounded-xl border border-border object-cover"
+                                        />
+                                    )
+                                )}
                                 <div className="flex flex-col gap-1.5">
                                     <label className="text-sm font-medium">
                                         Nome

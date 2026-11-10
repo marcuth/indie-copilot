@@ -38,7 +38,8 @@ export interface Project {
     website?: string
     slogan?: string
     alreadyExists: boolean
-    logoLocalPath?: string
+    /** Logo quadrada, redimensionada, como data URL */
+    logo?: string
     categoryId?: string
     category?: ProjectCategory
     // Módulos de planejamento (JSON serializado)
