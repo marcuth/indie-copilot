@@ -51,7 +51,48 @@ export const PAGE_REFERENCES: Partial<Record<ReferencePageKey, Reference[]>> = {
             url: "https://www.youtube.com/watch?v=9JwCjBjOR2I",
             description: "O Novo Programador",
         },
+        {
+            title: "O que aprendi construindo um Micro-SaaS de R$ 100k de ARR em 4 meses",
+            url: "https://www.youtube.com/watch?v=8w7khynZ0qw",
+            description: "Bruno Okamoto"
+        },
+        {
+            title: "Como montar um Plano de Negócios prático em 8 etapas",
+            url: "https://www.youtube.com/watch?v=SiLhRf8MtRY",
+            description: "Canal do Consultor"
+        },
     ],
+    problemSolution: [
+        {
+            title: "Desenvolvendo Meu SAAS do ZERO Até Chegar nos 30K de Faturamento MENSAL!",
+            url: "https://www.youtube.com/watch?v=gtaAXYL6H2U",
+            description: "O Novo Programador",
+        },
+        {
+            title: "#2 - Revelando a IDEIA de SAAS que me trará 30k de Faturamento MENSAL!",
+            url: "https://www.youtube.com/watch?v=_kJrbNoHcVY",
+            description: "O Novo Programador",
+        },
+    ],
+    targetAudience: [
+        {
+            title: "Desenvolvendo Meu SAAS do ZERO Até Chegar nos 30K de Faturamento MENSAL!",
+            url: "https://www.youtube.com/watch?v=gtaAXYL6H2U",
+            description: "O Novo Programador",
+        },
+        {
+            title: "#2 - Revelando a IDEIA de SAAS que me trará 30k de Faturamento MENSAL!",
+            url: "https://www.youtube.com/watch?v=_kJrbNoHcVY",
+            description: "O Novo Programador",
+        },
+    ],
+    competition: [
+        {
+            title: "#3 - Analisando os CONCORRENTES do Meu SAAS!",
+            url: "https://www.youtube.com/watch?v=FDzBZG1Hzh4",
+            description: "O Novo Programador",
+        },
+    ]
 }
 
 export function getReferences(pageKey: string): Reference[] {
