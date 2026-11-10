@@ -66,6 +66,11 @@ export const PAGE_REFERENCES: Partial<Record<ReferencePageKey, Reference[]>> = {
             url: "https://www.youtube.com/watch?v=UBntebTUGa0",
             description: "André Elias | Dev",
         },
+        {
+            title: "RANT: Empreendendo com Software do JEITO ERRADO!",
+            url: "https://www.youtube.com/watch?v=NuIOO5VWmXc",
+            description: "Fabio Akita",
+        },
     ],
     problemSolution: [
         {
