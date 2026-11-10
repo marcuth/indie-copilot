@@ -1,4 +1,5 @@
 import { LuBot, LuCheck, LuX, LuPencil, LuSparkles } from "react-icons/lu"
+import { ReferencesTrigger } from "@/components/project/references-sheet"
 import { useActiveProject } from "@/contexts/active-project-context"
 import { CopilotChat } from "@/components/copilot/copilot-chat"
 import { useState, type ReactNode } from "react"
@@ -65,6 +66,7 @@ export function SectionPage({
                         </p>
                     </div>
                     <div className="flex items-center gap-2">
+                        <ReferencesTrigger pageKey={fieldKey} />
                         {editing ? (
                             <>
                                 <Button

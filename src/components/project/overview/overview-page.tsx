@@ -6,6 +6,7 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { LuBot, LuExternalLink, LuPencil, LuCheck, LuX } from "react-icons/lu"
+import { ReferencesTrigger } from "@/components/project/references-sheet"
 import { useActiveProject } from "@/contexts/active-project-context"
 import { CopilotChat } from "@/components/copilot/copilot-chat"
 import { getCategories } from "@/lib/db/database-client"
@@ -106,6 +107,7 @@ export function OverviewPage() {
                         </p>
                     </div>
                     <div className="flex items-center gap-2">
+                        <ReferencesTrigger pageKey="overview" />
                         {editing ? (
                             <>
                                 <Button
